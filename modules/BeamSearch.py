@@ -229,17 +229,11 @@ class BeamSearch:
 
     @staticmethod
     def build_default_state_machine(vocab):
-        state_idx_mapping = {0: 'init', 1: 'final'}
+        state_idx_mapping = {0: 'final'}
 
         state_machine = StateMachine(events={'input': InputEvent()})
-        state_machine.add_state('init')
         state_machine.add_state('final')
         state_machine.add_state_idx_mapping(state_idx_mapping)
-        state_machine.add_transition(source_name='init', dest_name='final', event_name='input',
-                                     condition=TransitCondition(list(vocab.values())))
         state_machine.add_transition(source_name='final', dest_name='final', event_name='input',
                                      condition=TransitCondition(list(vocab.values())))
-        state_machine.add_transition(source_name='init', dest_name='init', event_name='input',
-                                     condition=TransitCondition(list(vocab.values())))
-
         return state_machine
