@@ -110,7 +110,7 @@ class DecoderAttCell(nn.Module):
         self.fc.bias.data.fill_(0)
         self.fc.weight.data.uniform_(-0.1, 0.1)
 
-    def forward(self, tokens, img_feature, h=None, c=None):
+    def forward(self, tokens, img_feature, states=None):
         word_features = self.embedding(tokens)
 
         feature_size = img_feature.shape[1]
@@ -122,9 +122,12 @@ class DecoderAttCell(nn.Module):
         img_feature = img_feature.permute(0, 2, 3, 1)
         img_feature = img_feature.view(batch_size, -1, feature_size)
 
-        if h is None and c is None:
+        if states is None:
             # if h and c is None, initialize them by using linear layer
             h, c = self.init_hidden(img_feature)
+        else:
+            h = states['h']
+            c = states['c']
 
         # calculate attention base on image feature and prev hidden states
         attention_features, _ = self.attention(img_feature, h)
@@ -135,7 +138,8 @@ class DecoderAttCell(nn.Module):
         h, c = self.decode_step(lstm_input, (h, c))
         logits = self.fc(h)
         log_probs = self.log_softmax(logits)
-        return log_probs, logits, (h, c)
+        states = {'h': h, 'c': c}
+        return log_probs, logits, states
 
 
 
