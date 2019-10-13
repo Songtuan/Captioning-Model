@@ -1,7 +1,10 @@
+from abc import ABC
+
 from modules import *
+from modules import Captioner
 
 
-class ShowTellCaptioner(nn.Module):
+class ShowTellCaptioner(Captioner):
     def __init__(self, vocab, attention_size=512, hidden_size=512, embed_dim=None,
                  pretrained_embedding=None, feature_size=2048, state_machine=None,
                  beam_size=3, seq_length=15):

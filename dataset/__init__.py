@@ -1,38 +1,42 @@
 import torch
-from torch.utils.data import Dataset
 import torchvision.transforms as trn
 import h5py
 
+from torch.utils.data import Dataset
+from demo.predictor import COCODemo
+from maskrcnn_benchmark.config import cfg
+
 
 class CaptionDataset(Dataset):
-    def __init__(self, input_file, transform=None):
+    def __init__(self, input_file, use_maskrcnn_benchmark=True, transform=None):
         h = h5py.File(input_file)
         self.imgs = h['images']
         self.captions = h['captions']
         self.captions_per_img = h.attrs['captions_per_image']
-        # self.captions_unencode = h['captions_uncode']
+        self.coco_demo = COCODemo(cfg)
         assert self.captions.shape[0] // self.imgs.shape[0] == self.captions_per_img
 
         if transform is not None:
+            # if customer transform rules are defined
+            # we will use this
             self.transform = transform
+        elif use_maskrcnn_benchmark:
+            # if we use maskrcnn_benchmark as our encoder
+            # we need to follow the corresponding image
+            # pre-process procedure
+            self.transform = self.coco_demo.build_transform()
         else:
-            self.transform = trn.Compose([trn.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+            self.transform = trn.ToTensor()
 
         assert self.imgs.shape[0] * 1 == self.captions.shape[0]
 
     def __getitem__(self, item):
         img = self.imgs[item // self.captions_per_img]
-        img = trn.ToTensor()(img)
-        if img[img > 1].shape[0] != 0 or img[img < 0].shape[0] != 0:
-            img = self.transform(img)
-        assert img.shape == torch.Size([3, 256, 256])
+        img = self.transform(img)
 
         caption = self.captions[item]
         caption = torch.from_numpy(caption).long()
 
-        # caption_unencode = self.captions_unencode[item]
-
-        # data = {'image': img, 'caption': caption, 'caption_unencode': caption_unencode}
         data = {'image': img, 'caption': caption}
         return data
 

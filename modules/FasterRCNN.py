@@ -6,6 +6,9 @@ from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 from torchvision.models.utils import load_state_dict_from_url
 
 from collections import OrderedDict
+from maskrcnn_benchmark.modeling.detector import build_detection_model
+from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
+from maskrcnn_benchmark.config import cfg
 
 model_urls = {
     'fasterrcnn_resnet50_fpn_coco':
@@ -54,3 +57,21 @@ class FasterRCNN_Encoder(nn.Module):
         # project the features to shape (batch_size, num_boxes, feature_dim)
         box_features = self.faster_rcnn.roi_heads.box_head(box_features)
         return box_features, proposal_losses
+
+
+class FasterRCNN(nn.Module):
+    def __init__(self):
+        super(FasterRCNN, self).__init__()
+        self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
+        self.model = build_detection_model(cfg)
+        # due to the cuda version and win10 restriction
+        # we do not use cuda in currently
+        # self.model.cuda()
+        self.model.eval()
+
+    def forward(self, imgs):
+        features, _ = self.model(imgs)
+        features = self.avgpool(features)
+        features = features.view(features.shape[0], -1)
+        return features
+

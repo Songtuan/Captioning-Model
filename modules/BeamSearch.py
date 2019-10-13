@@ -1,10 +1,6 @@
 import torch
-import plotly.offline as py
-import plotly.figure_factory as ff
 
-from StateMachine import *
 from BeamStateMachine import *
-from utils import util
 
 class BeamSearch:
     def __init__(self, beam_size, state_machine, end_token_idx, seq_length, vocab=None):
@@ -104,21 +100,6 @@ class BeamSearch:
         for s in range(beam_num):
             candidates[s] = sorted(candidates[s], key=lambda x: -x['p'])
 
-        candidates_visual = util.visual_component(candidates=candidates, beam_size=self.beam_size,
-                                                 id_to_word=self.id_to_word)
-
-        # for s in range(beam_num):
-        #     # used for testing
-        #     candidates_word[s] = sorted(candidates_word[s], key=lambda x: -x['p'])
-        # this bolck of code is used to analyse
-        # print('candidates word')
-        # for i in candidates_word:
-        #     print('state: {}'.format(self.state_machine.state_idx_mapping[i]))
-        #     print(candidates_word[i])
-        # print('candidates')
-        # print(candidates)
-        # print('******************************************')
-
         # reset the number of elements within each beam
         # the number of elements should be the minimum of beam_size and the numbere of candidates
         beam_sizes = [min(self.beam_size, len(candidates[s])) for s in range(beam_num)]
@@ -153,7 +134,7 @@ class BeamSearch:
 
         hidden_states = new_states
 
-        return beam_seq, beam_seq_logprobs, beam_logprobs_sum, beam_sizes, hidden_states, candidates_visual
+        return beam_seq, beam_seq_logprobs, beam_logprobs_sum, beam_sizes, hidden_states
 
     def search(self, hidden_states, log_probs, get_logprobs):
         if self.state_machine is None:
@@ -169,8 +150,6 @@ class BeamSearch:
         beam_sizes = [0] * beam_num
         beam_sizes[0] = 1
 
-        visual_table = {i: [] for i in range(beam_num)}
-
         for time_step in range(self.seq_length):
             logprobsf = log_probs.data.float()
             logprobsf[:, self.vocab['<pad>']] = logprobsf[:, self.vocab['<pad>']] - 1000
@@ -179,17 +158,8 @@ class BeamSearch:
             beam_seq_logprobs, \
             beam_logprobs_sum, \
             beam_sizes, \
-            hidden_states, \
-            candidates_visual = self._step(beam_sizes, logprobsf, beam_seq, beam_seq_logprobs, beam_logprobs_sum,
+            hidden_states = self._step(beam_sizes, logprobsf, beam_seq, beam_seq_logprobs, beam_logprobs_sum,
                                            time_step, hidden_states)
-
-            for i in range(beam_num):
-                visual_table[i].append(candidates_visual[i])
-
-            # this block of code is used for testing and analysing
-            # print('step log probability')
-            # print(beam_seq_logprobs)
-            # print('*************************************************')
 
             for vix in range(self.beam_size * (beam_num - 1), self.beam_size * beam_num):
                 # if time's up... or if end token is reached then copy beams
@@ -215,16 +185,6 @@ class BeamSearch:
             # log_probs, hidden_states = get_logprobs(it, hidden_states)
 
         done_beams = sorted(done_beams, key=lambda x: -x['p'])[: self.beam_size]
-        # for i in range(beam_num):
-        #         #     header = []
-        #         #     for j in range(beam_num):
-        #         #         state_name = self.state_machine.state_idx_mapping[j]
-        #         #         header.append(state_name)
-        #         #         header.append('log_prob')
-        #         #     table = [header] + visual_table[i]
-        #         #     table = ff.create_table(table)
-        #         #     table.layout.width = 10000
-        #         #     py.plot(table)
         return done_beams
 
     @staticmethod

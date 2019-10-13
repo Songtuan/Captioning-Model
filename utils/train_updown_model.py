@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader
 from torch import optim
 from tqdm import tqdm
 from models.UpDownModel import UpDownCaptioner
-from Data import CaptionDataset
 from allennlp.training.metrics import BLEU
 
 

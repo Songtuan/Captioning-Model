@@ -1,10 +1,4 @@
-import torch
 import torch.nn as nn
-
-from modules.updown_cell import UpDownCell
-from modules.FasterRCNN import FasterRCNN_Encoder
-from modules.BeamSearch import BeamSearch
-from functools import partial
 
 
 class CaptioningModel(nn.Module):
@@ -14,6 +8,11 @@ class CaptioningModel(nn.Module):
         self.encoder = encoder
         # captioner is used to generate image captions
         self.captioner = captioner
+
+        # particularly, we do not want to fine-tune
+        # encoder part
+        for parameter in self.encoder.parameters():
+            parameter.requires_grad = False
 
     def forward(self, imgs, targets=None):
         self.encoder.eval()  # usually we do not need to fine-tune encoder

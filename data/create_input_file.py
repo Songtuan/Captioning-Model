@@ -2,8 +2,8 @@ import h5py
 import json
 import os
 import numpy as np
-from skimage import io
-from skimage.transform import resize
+
+from PIL import Image
 from random import seed, choice, sample
 from tqdm import tqdm
 import argparse
@@ -34,7 +34,7 @@ def create_input_file(vocab_json, data_name='flickr8k', data_split_file='dataset
         # iterate through each image in dataset
         captions = []
         file_name = os.path.join(image_folder, img['filename']) if data_name != 'coco' else \
-            os.path.join(image_folder, img['filepath'], img['file_name'])
+            os.path.join(image_folder, img['filepath'], img['filename'])
         for c in img['sentences']:
             # record each caption
             captions.append(c['tokens'])
@@ -61,14 +61,16 @@ def create_input_file(vocab_json, data_name='flickr8k', data_split_file='dataset
     max_cap_length += 1  # the 1 add here is hold for 'EOS' token
 
     seed(123)
-    for imgs, caps, split in [  # (train_imgs, train_imgs_caps, 'TRAIN'),
-        (val_imgs, val_imgs_caps, 'VAL'),
-        (test_imgs, test_imgs_caps, 'TEST')]:
+    for imgs, caps, split in [(train_imgs, train_imgs_caps, 'TRAIN'),
+                              (val_imgs, val_imgs_caps, 'VAL'),
+                              (test_imgs, test_imgs_caps, 'TEST')]:
         # create hdf5 file for each TRAIN, VAL and TEST dataset
 
         with h5py.File(split + '.hdf5') as h:
             # create dataset to store images' data
-            imgs_dataset = h.create_dataset('images', (len(imgs), 256, 256, 3), dtype=float)
+            # dt refer to a data type which has variable size
+            dt = h5py.vlen_dtype(np.dtype('float'))
+            imgs_dataset = h.create_dataset('images', (len(imgs), ), dtype=dt)
             # create dataset to store captions, which should have size
             # (num_images * num_captions_per_img, max_cap_len + 1), the 1 add after max_cap_len is hold for
             # 'SOS' token (start of sentence)
@@ -81,15 +83,11 @@ def create_input_file(vocab_json, data_name='flickr8k', data_split_file='dataset
 
             for idx, img_name in enumerate(tqdm(imgs)):
                 # iterate through each image in split dataset
-                img = io.imread(img_name)
-                if len(img.shape) == 2:
-                    img = img[:, :, np.newaxis]
-                    img = np.concatenate([img, img, img], axis=2)
-
-                img = resize(img, (256, 256, 3))
-                assert img.shape == (256, 256, 3)
-
-                imgs_dataset[idx] = img  # record img data
+                # read the image data
+                pil_image = Image.open(img_name).convert('RGB')
+                img = np.array(pil_image)[:, :, [2, 1, 0]]
+                # record img data
+                imgs_dataset[idx] = img
 
                 # we copy the captions associate with current image
                 img_caps = caps[idx].copy()
@@ -146,7 +144,10 @@ parser.add_argument('--data_split_file', default='dataset_coco.json', help='data
 parser.add_argument('--vocab', default='vocab.json', help='vocabulary')
 parser.add_argument('--image_folder', default='images', help='folder which contain images')
 
+dir_main = os.path.join(__file__, '../..')
+
 if __name__ == '__main__':
     opt = parser.parse_args()
-    create_input_file(vocab_json=opt.vocab, data_name=opt.data_name,
+    vocab = os.path.join(dir_main, 'vocab', opt.vocab)
+    create_input_file(vocab_json=vocab, data_name=opt.data_name,
                       data_split_file=opt.data_split_file, image_folder=opt.image_folder)
