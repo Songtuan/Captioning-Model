@@ -3,8 +3,8 @@ import torch.nn as nn
 import allennlp.nn.beam_search as allen_beam_search
 
 from modules.updown_cell import UpDownCell
-from modules.FasterRCNN import FasterRCNN_Encoder
-from modules.BeamSearch import BeamSearch
+from modules.faster_rcnn import FasterRCNN_Encoder
+from modules.beam_search import BeamSearch
 from functools import partial
 
 

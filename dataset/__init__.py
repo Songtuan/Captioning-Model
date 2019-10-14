@@ -26,7 +26,7 @@ class CaptionDataset(Dataset):
             # pre-process procedure
             self.transform = self.coco_demo.build_transform()
         else:
-            self.transform = trn.ToTensor()
+            self.transform = trn.Compose([trn.Resize(255), trn.ToTensor()])
 
         assert self.imgs.shape[0] * 1 == self.captions.shape[0]
 

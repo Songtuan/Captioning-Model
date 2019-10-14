@@ -3,7 +3,7 @@ import torch.nn as nn
 import allennlp.nn.beam_search as allen_beam_search
 
 from functools import partial
-import modules.BeamSearch as BeamSearch
+import modules.beam_search as BeamSearch
 from modules import *
 
 

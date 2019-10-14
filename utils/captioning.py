@@ -4,7 +4,7 @@ import argparse
 import json
 import torchvision.transforms as trn
 import matplotlib.pyplot as plt
-import modules.BeamSearch as BeamSearch
+import modules.beam_search as BeamSearch
 
 from skimage.io import imread
 from skimage.transform import resize

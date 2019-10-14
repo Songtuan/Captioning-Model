@@ -14,14 +14,14 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "-c",
     "--captions-jsonpath",
-    default="data/coco/captions_train2017.json",
+    default="captions_train2017.json",
     help="Path to COCO train2017 captions json file.",
 )
 parser.add_argument("-t", "--word-count-threshold", type=int, default=5)
 parser.add_argument(
     "-o",
     "--output-dirpath",
-    default="data/vocabulary",
+    default="vocabulary",
     help="Path to a (non-existent directory to save the vocabulary.",
 )
 
@@ -36,7 +36,7 @@ PUNCTUATIONS: List[str] = [
 
 # Special tokens which should be added (all, or a subset) to the vocabulary.
 # We use the same token for @@PADDING@@ and @@UNKNOWN@@ -- @@UNKNOWN@@.
-SPECIAL_TOKENS: List[str] = ["@@UNKNOWN@@", "@@BOUNDARY@@"]
+SPECIAL_TOKENS: List[str] = ['<unk>', '<boundary>']
 
 # Type for each COCO caption example annotation.
 CocoCaptionExample = TypedDict("CocoCaptionExample", {"id": int, "image_id": int, "caption": str})

@@ -1,11 +1,17 @@
 import os
 import argparse
-import torch
-import torch.nn as nn
 
+from torch import optim
+from tqdm import tqdm
 from allennlp.training.metrics import BLEU
+from allennlp.data import Vocabulary
 from dataset import CaptionDataset
 from torch.utils.data import DataLoader
+from modules.faster_rcnn import FasterRCNN
+from modules.captioner.UpDownCaptioner import UpDownCaptioner
+from models.CaptioningModel import CaptioningModel
+from maskrcnn_benchmark.structures.image_list import to_image_list
+from maskrcnn_benchmark.config import cfg
 
 
 def train_batch(batch_data, model, optimizer):
@@ -19,6 +25,8 @@ def train_batch(batch_data, model, optimizer):
     # get training images and ground-true target
     images = batch_data['images']
     targets = batch_data['captions']
+    # convert input images to suitable format required by maskrcnn_benchmark
+    images = to_image_list(images, cfg.DATALOADER.SIZE_DIVISIBILITY)
 
     # force model in training mode
     # and clean the grads of model
@@ -39,6 +47,7 @@ parser = argparse.ArgumentParser('Training Parameters')
 parser.add_argument('--epochs', type=int, default=30, help='setting the number of training epochs')
 parser.add_argument('--lr', type=float, default=4e-4, help='setting the initial learning rate')
 parser.add_argument('--batch_size', type=int, default=50, help='setting the batch size')
+parser.add_argument('--check_point', default='UpDownCaptioner.pth', help='check point path')
 
 
 if __name__ == '__main__':
@@ -46,6 +55,12 @@ if __name__ == '__main__':
     epochs = opt.epochs
     lr = opt.lr
     batch_size = opt.batch_size
+    check_point = opt.check_point
+
+    # load vocabulary
+    vocabulary_path = 'vocab/vocabulary'
+    vocabulary = Vocabulary.from_files(vocabulary_path)
+    vocab = vocabulary.get_token_to_index_vocabulary()
 
     # load training set
     training_set_path = os.path.join('data', 'TRAIN.hdf5')
@@ -59,4 +74,22 @@ if __name__ == '__main__':
     # make both of them iterable
     training_loader = DataLoader(dataset=training_set, batch_size=batch_size)
     eval_loader = DataLoader(dataset=eval_set, batch_size=batch_size)
+
+    # build encoder
+    encoder = FasterRCNN()
+
+    # build decoder
+    decoder = UpDownCaptioner(vocab=vocab)
+    decoder.load(check_point)
+
+    # build complete model
+    model = CaptioningModel(encoder=encoder, captioner=decoder)
+
+    optimizer = optim.Adam(params=model.parameters(), lr=lr)
+
+    for epoch in tqdm(range(epochs)):
+        for batch_data in tqdm(training_loader):
+           train_batch(batch_data=batch_data, model=model)
+
+
 

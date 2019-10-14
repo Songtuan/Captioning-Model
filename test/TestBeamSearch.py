@@ -2,8 +2,8 @@ import unittest
 import os
 import torchvision.transforms as trn
 import json
-from StateMachine import *
-from BeamStateMachine import *
+from state_machine import *
+from beam_state_machine import *
 from skimage.io import imread
 from skimage.transform import resize
 from utils import util
