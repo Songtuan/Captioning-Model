@@ -1,12 +1,12 @@
 import unittest
 import torch
 
-from modules.faster_rcnn import FasterRCNN
+from modules.faster_rcnn import MaskRCNN_Benchmark
 
 
 class MyTestCase(unittest.TestCase):
     def test_faster_rcnn(self):
-        faster_rcnn = FasterRCNN()
+        faster_rcnn = MaskRCNN_Benchmark()
         batch_size = 2
         test_input = [torch.rand(3, 255, 255), torch.rand(3, 255, 255)]
         features = faster_rcnn(test_input)

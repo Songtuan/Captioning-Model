@@ -157,7 +157,7 @@ if __name__ == '__main__':
             torch.save(model.state_dict(), save_dir)
         
         print('\n')
-        print('Epoch: {2d} | Epoch Loss: {7.3f} | BLEU_4 Score: {5.2f}'.format(epoch, epoch_loss, bleu_score))
+        print('Epoch: {0:2d} | Epoch Loss: {1:7.3f} | BLEU_4 Score: {2:5.2f}'.format(epoch, epoch_loss, bleu_score))
 
 
 
