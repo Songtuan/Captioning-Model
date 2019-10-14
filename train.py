@@ -1,49 +1,17 @@
 import os
 import argparse
-import torch
-
-from tqdm import tqdm
-
-from allennlp.training.metrics import BLEU
-from allennlp.data import Vocabulary
-
-from dataset import CaptionDataset
-from modules.faster_rcnn import MaskRCNN_Benchmark
-from modules.captioner.UpDownCaptioner import UpDownCaptioner
-from models.CaptioningModel import CaptioningModel
 
 from torch import optim
-from torch.nn.utils import clip_grad_norm_
+from tqdm import tqdm
+from allennlp.training.metrics import BLEU
+from allennlp.data import Vocabulary
+from dataset import CaptionDataset
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-
+from modules.faster_rcnn import FasterRCNN
+from modules.captioner.UpDownCaptioner import UpDownCaptioner
+from models.CaptioningModel import CaptioningModel
 from maskrcnn_benchmark.structures.image_list import to_image_list
 from maskrcnn_benchmark.config import cfg
-
-
-# tensorboard summary writter
-writer = SummaryWriter()
-
-
-def eval_batch(batch_data, model, evaluator):
-    """
-    perform evaluation over one batch data
-    :param batch_data: Dict[str, torch.Tensor], batch data read from data loader
-    :param model: Captioning model
-    :evaluator: allennlp.training.metrics.BLEU, evaluate bleu_4 score
-    :return: 
-    """
-    model.eval()
-
-    # get evaluation images and ground-true target
-    images = batch_data['images']
-    targets = batch_data['captions']
-    # convert input images to suitable format required by maskrcnn_benchmark
-    images = to_image_list(images, cfg.DATALOADER.SIZE_DIVISIBILITY)
-
-    output = model(images)
-    predicts = output['seq']
-    evaluator(predictions=predicts, gold_targets=targets)
 
 
 def train_batch(batch_data, model, optimizer):
@@ -52,7 +20,7 @@ def train_batch(batch_data, model, optimizer):
     :param batch_data: Dict[str, torch.Tensor], batch data read from data-loader
     :param model: Captioning model
     :param optimizer: torch.nn.optimizer
-    :return: torch.Tensor loss in this batch
+    :return:
     """
     # get training images and ground-true target
     images = batch_data['images']
@@ -70,16 +38,9 @@ def train_batch(batch_data, model, optimizer):
     assert 'loss' in output
 
     # perform back-propagation
-    # and clip the grads
-    batch_loss = output['loss']
-    batch_loss.backward()
-    clip_grad_norm_(model.parameters(), 1.0)
+    loss = output['loss']
+    loss.backward()
     optimizer.step()
-    
-    # add batch loss to tensorboard
-    writer.add_scalar('loss', batch_loss)
-    
-    return batch_loss
 
 
 parser = argparse.ArgumentParser('Training Parameters')
@@ -87,7 +48,6 @@ parser.add_argument('--epochs', type=int, default=30, help='setting the number o
 parser.add_argument('--lr', type=float, default=4e-4, help='setting the initial learning rate')
 parser.add_argument('--batch_size', type=int, default=50, help='setting the batch size')
 parser.add_argument('--check_point', default='UpDownCaptioner.pth', help='check point path')
-parser.add_argument('--save_dir', default='CaptioningModel.pth', help='path to save the model')
 
 
 if __name__ == '__main__':
@@ -96,7 +56,6 @@ if __name__ == '__main__':
     lr = opt.lr
     batch_size = opt.batch_size
     check_point = opt.check_point
-    save_dir = opt.save_dir
 
     # load vocabulary
     vocabulary_path = 'vocab/vocabulary'
@@ -117,7 +76,7 @@ if __name__ == '__main__':
     eval_loader = DataLoader(dataset=eval_set, batch_size=batch_size)
 
     # build encoder
-    encoder = MaskRCNN_Benchmark()
+    encoder = FasterRCNN()
 
     # build decoder
     decoder = UpDownCaptioner(vocab=vocab)
@@ -126,42 +85,11 @@ if __name__ == '__main__':
     # build complete model
     model = CaptioningModel(encoder=encoder, captioner=decoder)
 
-    # build optimizers
     optimizer = optim.Adam(params=model.parameters(), lr=lr)
 
-    # initialize best bleu score
-    # we will store the model which
-    # reach has the best score
-    bleu_score_best = 0
-
     for epoch in tqdm(range(epochs)):
-        epoch_loss = 0.0
-
         for batch_data in tqdm(training_loader):
-            # perform training over one batch
-            batch_loss = train_batch(batch_data=batch_data, model=model, optimizer=optimizer)
-            epoch_loss += batch_loss.item()
-        
-        epoch_loss = epoch_loss / len(training_loader)
-
-        # perform evaluation
-        evaluator = BLEU(exclude_indices={vocab['<unk>'], vocab['<boundary>']})
-
-        with torch.no_grad():
-            for batch_data in eval_loader:
-                eval_batch(batch_data=batch_data, model=model, evaluator=evaluator)
-
-        bleu_score = evaluator.get_meric()
-        if bleu_score > bleu_score_best:
-            bleu_score_best = bleu_score
-            torch.save(model.state_dict(), save_dir)
-        
-        print('\n')
-        print('Epoch: {2d} | Epoch Loss: {7.3f} | BLEU_4 Score: {5.2f}'.format(epoch, epoch_loss, bleu_score))
-
-
-
-        
+           train_batch(batch_data=batch_data, model=model)
 
 
 
