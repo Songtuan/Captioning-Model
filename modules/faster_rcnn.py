@@ -9,6 +9,7 @@ from collections import OrderedDict
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.config import cfg
+from maskrcnn_benchmark.structures.image_list import to_image_list
 
 model_urls = {
     'fasterrcnn_resnet50_fpn_coco':
@@ -70,6 +71,7 @@ class MaskRCNN_Benchmark(nn.Module):
         self.model.eval()
 
     def forward(self, imgs):
+        imgs = to_image_list(imgs, cfg.DATALOADER.SIZE_DIVISIBILITY)
         features, _ = self.model(imgs)
         features = self.avgpool(features)
         features = features.view(features.shape[0], -1)

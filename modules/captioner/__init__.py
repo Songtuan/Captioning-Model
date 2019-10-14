@@ -12,7 +12,7 @@ class Captioner(nn.Module):
     def load(self, PATH):
         raise NotImplementedError
 
-    def _step(self, image_features, tokens, states):
+    def _step(self, tokens, states, image_features):
         '''
         Implement single decode step
         :param image_features(torch.Tensor): image features produced by encoder,
@@ -54,13 +54,16 @@ class Captioner(nn.Module):
             # in training mode, ground-true targets should not be None
             assert targets is not None
             # max decoder step we need to perform
-            max_step = self.seq_length - 1
+            max_step = targets.shape[-1] - 1
             # a tensor contains logits of each step
             logits_seq = torch.zeros(max_step, batch_size, len(self.vocab))
+            # we transpose targets tensor to shape (max_length, batch_size)
+            # this is useful when we calculate loss
+            targets = targets.permute(1, 0)
 
             for t in range(max_step):
                 # perform decode step
-                tokens = targets[:, t]
+                tokens = targets[t, :]
                 # logits should has shape (batch_size, vocab_size)
                 logits, states = self._step(image_features=image_features, tokens=tokens, states=states)
                 # update logits_seq
@@ -69,7 +72,12 @@ class Captioner(nn.Module):
             # the ground-true targets should exclude the first token
             # '<start>' since out model do not produce this token at
             # the beginning of sequence
-            gt = targets[1:]
+            gt = targets[1:, :]
+            # we need to force the logits_seq has shape (batch_size * max_step, vocab_size)
+            # and ground-true caption has shape (batch_size * max_step) so that them can
+            # be accepted as arguments in softmax criterion
+            gt = gt.view(-1)
+            logits_seq = logits_seq.view(-1, len(self.vocab))
             loss = self.criterion(logits_seq, gt)
 
             # add loss to output dict
@@ -80,8 +88,9 @@ class Captioner(nn.Module):
             beam_search = allen_beam_search.BeamSearch(end_index=end_index,
                                                        max_steps=self.seq_length, beam_size=self.beam_size,
                                                        per_node_beam_size=self.beam_size)
-            init_tokens = torch.tensor([start_index]).expand(batch_size).cuda()
-            step = partial(self._decode_step, image_features=image_features)
+            # init_tokens = torch.tensor([start_index]).expand(batch_size).cuda()
+            init_tokens = torch.tensor([start_index]).expand(batch_size)
+            step = partial(self._step, image_features=image_features)
             top_k_preds, log_probs = beam_search.search(start_predictions=init_tokens, start_state=states, step=step)
             preds = top_k_preds[:, 0, :]
             output['seq'] = preds

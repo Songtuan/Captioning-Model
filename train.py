@@ -38,8 +38,6 @@ def eval_batch(batch_data, model, evaluator):
     # get evaluation images and ground-true target
     images = batch_data['images']
     targets = batch_data['captions']
-    # convert input images to suitable format required by maskrcnn_benchmark
-    images = to_image_list(images, cfg.DATALOADER.SIZE_DIVISIBILITY)
 
     output = model(images)
     predicts = output['seq']
@@ -57,8 +55,6 @@ def train_batch(batch_data, model, optimizer):
     # get training images and ground-true target
     images = batch_data['images']
     targets = batch_data['captions']
-    # convert input images to suitable format required by maskrcnn_benchmark
-    images = to_image_list(images, cfg.DATALOADER.SIZE_DIVISIBILITY)
 
     # force model in training mode
     # and clean the grads of model
