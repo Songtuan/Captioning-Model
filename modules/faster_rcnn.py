@@ -59,9 +59,9 @@ class FasterRCNN_Encoder(nn.Module):
         return box_features, proposal_losses
 
 
-class FasterRCNN(nn.Module):
+class MaskRCNN_Benchmark(nn.Module):
     def __init__(self):
-        super(FasterRCNN, self).__init__()
+        super(MaskRCNN_Benchmark, self).__init__()
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
         self.model = build_detection_model(cfg)
         # due to the cuda version and win10 restriction
