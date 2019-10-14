@@ -7,7 +7,7 @@ from allennlp.training.metrics import BLEU
 from allennlp.data import Vocabulary
 from dataset import CaptionDataset
 from torch.utils.data import DataLoader
-from modules.faster_rcnn import FasterRCNN
+from modules.faster_rcnn import MaskRCNN_Benchmark
 from modules.captioner.UpDownCaptioner import UpDownCaptioner
 from models.CaptioningModel import CaptioningModel
 from maskrcnn_benchmark.structures.image_list import to_image_list
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     eval_loader = DataLoader(dataset=eval_set, batch_size=batch_size)
 
     # build encoder
-    encoder = FasterRCNN()
+    encoder = MaskRCNN_Benchmark()
 
     # build decoder
     decoder = UpDownCaptioner(vocab=vocab)

@@ -20,7 +20,7 @@ class FasterRCNN_Encoder(nn.Module):
         super(FasterRCNN_Encoder, self).__init__()
         backbone = resnet_fpn_backbone('resnet50', False)
         self.faster_rcnn = FasterRCNN(backbone, num_classes=91, rpn_post_nms_top_n_train=200,
-                                      rpn_post_nms_top_n_test=100)
+                                              rpn_post_nms_top_n_test=100)
         state_dict = load_state_dict_from_url(model_urls['fasterrcnn_resnet50_fpn_coco'], progress=True)
         self.faster_rcnn.load_state_dict(state_dict)
 
@@ -59,9 +59,9 @@ class FasterRCNN_Encoder(nn.Module):
         return box_features, proposal_losses
 
 
-class FasterRCNN(nn.Module):
+class MaskRCNN_Benchmark(nn.Module):
     def __init__(self):
-        super(FasterRCNN, self).__init__()
+        super(MaskRCNN_Benchmark, self).__init__()
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
         self.model = build_detection_model(cfg)
         # due to the cuda version and win10 restriction
